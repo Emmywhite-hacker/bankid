@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SMS Verification Platform</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+<header>
+  <h1>📲 SMS Verification Hub</h1>
+</header>
+
+<main>
+
+<!-- SMS SECTION -->
+<section id="sms">
+  <h2>Receive SMS</h2>
+
+  <label>Platform</label>
+  <select id="platform">
+    <option>WhatsApp</option>
+    <option>Facebook</option>
+    <option>Telegram</option>
+    <option>TikTok</option>
+  </select>
+
+  <label>Country</label>
+  <select id="country">
+    <option value="+1">🇺🇸 United States</option>
+    <option value="+44">🇬🇧 United Kingdom</option>
+    <option value="+49">🇩🇪 Germany</option>
+    <option value="+33">🇫🇷 France</option>
+    <option value="+39">🇮🇹 Italy</option>
+    <option value="+34">🇪🇸 Spain</option>
+    <option value="+31">🇳🇱 Netherlands</option>
+    <option value="+46">🇸🇪 Sweden</option>
+    <option value="+47">🇳🇴 Norway</option>
+    <option value="+1">🇨🇦 Canada</option>
+    <option value="+55">🇧🇷 Brazil</option>
+    <option value="+234">🇳🇬 Nigeria</option>
+
+    <!-- ASIA -->
+    <option value="+91">🇮🇳 India</option>
+    <option value="+86">🇨🇳 China</option>
+    <option value="+81">🇯🇵 Japan</option>
+    <option value="+82">🇰🇷 South Korea</option>
+    <option value="+65">🇸🇬 Singapore</option>
+  </select>
+
+  <button onclick="getNumber()">Get Number</button>
+
+  <h3>📱 Number</h3>
+  <p id="numberBox">---</p>
+
+  <button id="codeBtn" onclick="requestCode()" disabled>
+    Request Code
+  </button>
+
+  <h3>💬 SMS</h3>
+  <p id="smsBox">Waiting...</p>
+</section>
+
+<!-- LIVE SMS -->
+<section id="sms-history">
+  <h2>📜 Live SMS Activity</h2>
+  <div id="historyBox"></div>
+</section>
+
+</main>
+
+<script src="js/data.js"></script>
+<script src="js/sms.js"></script>
+
+</body>
+</html>
