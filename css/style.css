@@ -1,0 +1,55 @@
+body {
+  background: #0b0b0b;
+  color: white;
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+section {
+  background: #111;
+  padding: 20px;
+  border-radius: 15px;
+  margin-bottom: 30px;
+  box-shadow: 0 0 15px rgba(0,255,255,0.3);
+}
+
+select, button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  border-radius: 8px;
+  border: none;
+  font-size: 16px;
+}
+
+button {
+  background: linear-gradient(45deg,#00fff0,#00ff99);
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button:disabled {
+  opacity: 0.5;
+}
+
+#sms-history {
+  background: #0f0f0f;
+}
+
+.sms-item {
+  background: rgba(0,255,200,0.1);
+  padding: 10px;
+  margin: 8px 0;
+  border-left: 4px solid cyan;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from {opacity: 0; transform: translateY(10px);}
+  to {opacity: 1; transform: translateY(0);}
+}
