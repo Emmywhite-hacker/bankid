@@ -1,1 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini Militia Clone Pro — Emmanuel</title>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/phaser3-rex-plugins/dist/rexvirtualjoystickplugin.min.js"></script>
+<style>
+body { margin:0; padding:0; background:#222; }
+#game-container { width:100%; height:100vh; overflow:hidden; }
+#switchBtn {
+  position:absolute; right:20px; top:20px;
+  background:#333; color:white; padding:8px 12px;
+  border-radius:6px; font-size:18px; z-index:1000; user-select:none;
+}
+</style>
+</head>
+<body>
+<div id="switchBtn">Switch Weapon</div>
+<div id="game-container"></div>
 
+<script>
+// === Config ===
+const config = {
+  type: Phaser.AUTO,
+  parent: 'game-container',
+  width: window.innerWidth,
+  height: window.innerHeight,
+  physics: { default:'arcade', arcade:{ debug:false } },
+  scene: { preload, create, update },
+  plugins: {
+    global: [
+      { key:'rexVirtualJoyStick', plugin: rexvirtualjoystickplugin, start:true }
+    ]
+  }
+};
+
+let game = new Phaser.Game(config);
+
+// === Variables ===
+let player, moveStick, aimStick, bullets, enemies=[], obstacles=[], powerups=[];
+let currentWeapon = 0;
+const weapons = [
+  {name:'Pistol', speed:600, damage:10, rate:300, sprite:'pistol'},
+  {name:'Rifle', speed:900, damage:20, rate:150, sprite:'rifle'},
+  {name:'Rocket', speed:400, damage:40, rate:700, sprite:'rocket'}
+];
+let lastShot = 0;
+let scoreText, healthText, weaponText, usernameText;
+let score = 0;
+
+// === Preload ===
+function preload() {
+  // Player / Enemy sprites
+  this.load.spritesheet('player','https://i.imgur.com/7w3Ej9l.png',{frameWidth:64,frameHeight:64});
+  this.load.spritesheet('enemy','https://i.imgur.com/1lHzOqA.png',{frameWidth:64,frameHeight:64});
+
+  // Weapons (cartoon style)
+  this.load.image('pistol','https://i.imgur.com/xyJ8Fgf.png');
+  this.load.image('rifle','https://i.imgur.com/qxgq0nU.png');
+  this.load.image('rocket','https://i.imgur.com/OD1y58h.png');
+
+  this.load.image('bullet','https://i.imgur.com/B0zxQZf.png');
+
+  // Desert map
+  this.load.image('ground','https://i.imgur.com/yAOlW7D.png'); // desert tile
+  this.load.image('obstacle','https://i.imgur.com/8r3sYbz.png'); // crates/rocks
+  this.load.image('healthpack','https://i.imgur.com/8aOqDza.png');
+
+  // Sounds
+  this.load.audio('shoot','https://freesound.org/data/previews/26/26159_24061-lq.mp3');
+  this.load.audio('explosion','https://freesound.org/data/previews/20/20318_512-lq.mp3');
+  this.load.audio('hit','https://freesound.org/data/previews/41/41568_512-lq.mp3');
+}
+
+// === Create ===
+function create() {
+  const self = this;
+
+  // Background (large desert)
+  this.add.tileSprite(0,0,4000,4000,'ground').setOrigin(0);
+
+  // Bullets group
+  bullets = this.physics.add.group();
+
+  // Player
+  player = this.physics.add.sprite(400,300,'player');
+  player.setCollideWorldBounds(true);
+  player.health = 100;
+  player.weaponSprite = this.add.image(0,0,weapons[currentWeapon].sprite).setScale(0.5);
+
+  // Camera follow
+  this.cameras.main.startFollow(player,true,0.08,0.08);
+
+  // Player animation
+  this.anims.create({ key:'idle', frames:this.anims.generateFrameNumbers('player',{start:0,end:3}), frameRate:6, repeat:-1 });
+  player.play('idle');
+
+  // Enemies
+  for(let i=0;i<10;i++){
+    let x=Phaser.Math.Between(100,3900), y=Phaser.Math.Between(100,3900);
+    let e=this.physics.add.sprite(x,y,'enemy'); e.health=50;
+    enemies.push(e);
+    this.anims.create({ key:'enemyIdle'+i, frames:this.anims.generateFrameNumbers('enemy',{start:0,end:3}), frameRate:6, repeat:-1 });
+    e.play('enemyIdle'+i);
+  }
+
+  // Obstacles
+  for(let i=0;i<20;i++){
+    let o=this.physics.add.staticImage(Phaser.Math.Between(200,3800),Phaser.Math.Between(200,3800),'obstacle');
+    obstacles.push(o);
+  }
+
+  // Powerups
+  for(let i=0;i<5;i++){
+    let p=this.physics.add.staticImage(Phaser.Math.Between(300,3700),Phaser.Math.Between(300,3700),'healthpack');
+    powerups.push(p);
+    this.physics.add.overlap(player,p,()=>{
+      player.health=Math.min(player.health+30,100);
+      p.destroy();
+    });
+  }
+
+  // UI
+  scoreText=this.add.text(16,16,'Score: 0',{fontSize:'24px',fill:'#fff'}).setScrollFactor(0);
+  healthText=this.add.text(16,50,'Health: 100',{fontSize:'24px',fill:'#fff'}).setScrollFactor(0);
+  weaponText=this.add.text(16,86,'Weapon: Pistol',{fontSize:'24px',fill:'#fff'}).setScrollFactor(0);
+  usernameText=this.add.text(config.width-180,16,'By: Emmanuel',{fontSize:'24px',fill:'#fff'}).setScrollFactor(0);
+
+  // Dual joystick
+  moveStick = this.plugins.get('rexVirtualJoyStick').add(this,{
+    x:100, y:config.height-100, radius:60,
+    base:this.add.circle(0,0,60,0x888888), thumb:this.add.circle(0,0,40,0xcccccc)
+  });
+  aimStick = this.plugins.get('rexVirtualJoyStick').add(this,{
+    x:config.width-100, y:config.height-100, radius:60,
+    base:this.add.circle(0,0,60,0x888888), thumb:this.add.circle(0,0,40,0xcccccc)
+  });
+
+  // Switch weapon button
+  document.getElementById('switchBtn').onclick = ()=>{
+    currentWeapon=(currentWeapon+1)%weapons.length;
+    weaponText.setText('Weapon: '+weapons[currentWeapon].name);
+    player.weaponSprite.setTexture(weapons[currentWeapon].sprite);
+  }
+}
+
+// === Update ===
+function update(time, delta){
+  // Movement
+  player.setVelocity(moveStick.forceX*200, moveStick.forceY*200);
+
+  // Weapon sprite follows player and rotates
+  player.weaponSprite.x = player.x;
+  player.weaponSprite.y = player.y;
+  let angle = Math.atan2(aimStick.forceY, aimStick.forceX);
+  player.weaponSprite.rotation = angle;
+
+  // Shooting
+  if ((aimStick.forceX!=0 || aimStick.forceY!=0) && time>lastShot+weapons[currentWeapon].rate){
+    let b=bullets.create(player.x,player.y,'bullet');
+    b.setVelocity(Math.cos(angle)*weapons[currentWeapon].speed,Math.sin(angle)*weapons[currentWeapon].speed);
+    lastShot=time;
+    game.scene.scenes[0].sound.play('shoot');
+  }
+
+  // Enemy AI
+  enemies.forEach(enemy=>{
+    if(!enemy.active)return;
+    game.physics.moveToObject(enemy,player,60);
+
+    if (Phaser.Math.Distance.Between(enemy.x,enemy.y,player.x,player.y)<500 && Math.random()<0.01){
+      let a=Math.atan2(player.y-enemy.y,player.x-enemy.x);
+      let b=bullets.create(enemy.x,enemy.y,'bullet');
+      b.setVelocity(Math.cos(a)*200,Math.sin(a)*200);
+      b.fromEnemy=true;
+      game.scene.scenes[0].sound.play('shoot');
+    }
+  });
+
+  // Bullet collision
+  bullets.children.iterate(b=>{
+    if(!b)return;
+    if(b.fromEnemy && Phaser.Geom.Intersects.RectangleToRectangle(b.getBounds(),player.getBounds())){
+      player.health-=10;
+      healthText.setText('Health: '+player.health);
+      b.destroy();
+      game.scene.scenes[0].sound.play('hit');
+      if(player.health<=0) location.reload();
+    }
+    enemies.forEach((e,i)=>{
+      if(!b.fromEnemy && Phaser.Geom.Intersects.RectangleToRectangle(b.getBounds(),e.getBounds())){
+        e.health-=weapons[currentWeapon].damage;
+        if(e.health<=0){ e.destroy(); score+=10; scoreText.setText('Score: '+score); game.scene.scenes[0].sound.play('explosion'); }
+        b.destroy();
+      }
+    });
+  });
+}
+</script>
+</body>
+</html>
